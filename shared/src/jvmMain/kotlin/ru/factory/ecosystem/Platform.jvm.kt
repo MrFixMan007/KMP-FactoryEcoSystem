@@ -1,7 +1,14 @@
 package ru.factory.ecosystem
 
-class JVMPlatform: Platform {
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+
+class JVMPlatform : Platform {
     override val name: String = "Java ${System.getProperty("java.version")}"
+    override fun openInspector() {
+    }
 }
 
 actual fun getPlatform(): Platform = JVMPlatform()
+
+actual fun createHttpClient(): HttpClient = HttpClient(OkHttp)
