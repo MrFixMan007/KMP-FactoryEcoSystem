@@ -1,6 +1,6 @@
 package ru.factory.ecosystem.core.ui.viewmodel
 
-
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.update
 
 abstract class BaseViewModel<State : UiState, Effect : UiSideEffect>(
     initialState: State,
-) {
+) : ViewModel() {
 
     private val _state: MutableStateFlow<State> = MutableStateFlow(initialState)
     val state = _state.asStateFlow()

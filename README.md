@@ -1,3 +1,8 @@
+# KMP приложение для Android, iOS, Web, Desktop (JVM), Server
+Подключаем клиенты к серверу, получаем ответы и отправляем запросы об опасности на производстве
+---
+
+
 This is a Kotlin Multiplatform project targeting Android, iOS, Web, Desktop (JVM), Server.
 
 * [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
