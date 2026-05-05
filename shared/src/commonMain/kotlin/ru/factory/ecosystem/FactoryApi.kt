@@ -11,7 +11,7 @@ object FactoryApi {
     private val BASE_URL = when {
         // Android Emulator uses 10.0.2.2 to access host loopback
         platform.name.contains("Android") -> {
-            "http://10.0.2.2:$SERVER_PORT"
+            "http://$SERVER_HOST_FOR_ANDROID_EMULATOR:$SERVER_PORT"
         }
         // iOS Simulator and Desktop/Web use localhost
         else -> {

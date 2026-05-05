@@ -10,20 +10,17 @@ class EntryScreenViewModel(
 ) : BaseViewModel<EntryScreenState, EntryScreenSideEffect>(EntryScreenState()) {
 
     init {
-        viewModelScope.launch {
-            setGreetings()
-        }
+        loadGreeting()
     }
 
-    private suspend fun setGreetings() {
-        try {
-            val greeting = factoryApi.getLol()
-
-            setState {
-                it.copy(label = greeting)
+    fun loadGreeting() {
+        viewModelScope.launch {
+            try {
+                val greeting = factoryApi.getGreeting()
+                setState { it.copy(label = greeting) }
+            } catch (e: Exception) {
+                println("loadGreeting error: $e")
             }
-        } catch (e: Exception) {
-            println("setGreetings error: $e")
         }
     }
 }

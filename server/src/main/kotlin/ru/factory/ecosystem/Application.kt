@@ -17,26 +17,41 @@ import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
+import io.ktor.server.websocket.*
+import io.ktor.websocket.*
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.util.*
+import kotlin.collections.LinkedHashSet
 
 fun main() {
     embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0", module = Application::module)
         .start(wait = true)
 }
 
+// Хранилище активных WebSocket-сессий
+val sessions = Collections.synchronizedSet<DefaultWebSocketServerSession>(LinkedHashSet())
+
 // Client to communicate with Python microservice
 val pythonClient = HttpClient(CIO) {
     install(ClientContentNegotiation) {
         json(Json {
-            ignoreUnknownKeys = true // Игнорировать лишние поля, если Python пришлет что-то новое
+            ignoreUnknownKeys = true
             isLenient = true
-            prettyPrint = true
         })
     }
 }
 
 fun Application.module() {
+    // Установка WebSockets на сервере
+    install(WebSockets) {
+        pingPeriodMillis = 15000
+        timeoutMillis = 15000
+        maxFrameSize = Long.MAX_VALUE
+        masking = false
+    }
+
     // 1. Install ContentNegotiation for the SERVER to respond with JSON
     install(ContentNegotiation) {
         json(Json {
@@ -53,8 +68,25 @@ fun Application.module() {
     }
 
     routing {
+        // Эндпоинт для подключения клиентов по WebSocket
+        webSocket("/notifications") {
+            sessions.add(this)
+            try {
+                for (frame in incoming) {
+                    // Просто держим соединение открытым
+                    println("frame $frame")
+                }
+            } catch (e: ClosedReceiveChannelException) {
+                println("📱 Клиент отключился: ${e.localizedMessage}")
+            } catch (e: Exception) {
+                println("📱 Ошибка соединения: ${e.localizedMessage}")
+            } finally {
+                sessions.remove(this)
+            }
+        }
+
         get("/") {
-            call.respondText("Ktor: ${Greeting().greet()}")
+            call.respondText("Response: ${Greeting().greet()}")
         }
 
         get("/lol") {
@@ -67,29 +99,29 @@ fun Application.module() {
             val file = File("test_images/hand.png")
 
             if (!file.exists()) {
-                call.respondText(
-                    "❌ Ошибка: Файл не найден по пути ${file.absolutePath}",
-                    status = HttpStatusCode.NotFound
-                )
+                call.respondText("Файл не найден", status = HttpStatusCode.NotFound)
                 return@get
             }
 
             // 2. Читаем байты
             val imageBytes = file.readBytes()
-            println("📤 Отправляем фото в Python (${imageBytes.size} байт)...")
+            val mlResponse: PythonMlResponse? = analyzeFrameWithPython(imageBytes)
 
-            // 3. Вызываем нашу функцию (из прошлого шага), которая стучится в Python
-            val pythonResponse: PythonMlResponse? = analyzeFrameWithPython(imageBytes)
+            if (mlResponse != null) {
+                // РАССЫЛКА УВЕДОМЛЕНИЯ ВСЕМ КЛИЕНТАМ
+                val message = "Обнаружено объектов: ${mlResponse.objects.size}. Первый: ${mlResponse.objects.firstOrNull()?.label}"
+                
+                sessions.forEach { session ->
+                    try {
+                        session.send(Frame.Text("NOTIFICATION: $message"))
+                    } catch (e: Exception) {
+                        println("Ошибка отправки в сокет: ${e.message}")
+                    }
+                }
 
-            // 4. Возвращаем результат в браузер
-            if (pythonResponse != null) {
-                // Ktor автоматически превратит PythonMlResponse в красивый JSON
-                call.respond(HttpStatusCode.OK, pythonResponse)
+                call.respond(HttpStatusCode.OK, mlResponse)
             } else {
-                call.respondText(
-                    "❌ Ошибка: Python-сервер не ответил или вернул ошибку.",
-                    status = HttpStatusCode.InternalServerError
-                )
+                call.respondText("Ошибка Python ML", status = HttpStatusCode.InternalServerError)
             }
         }
     }
