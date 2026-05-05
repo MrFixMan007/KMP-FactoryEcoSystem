@@ -2,6 +2,7 @@ package ru.factory.ecosystem
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.darwin.Darwin
+import io.ktor.client.plugins.websocket.WebSockets
 import platform.UIKit.UIDevice
 
 class IOSPlatform : Platform {
@@ -15,4 +16,6 @@ class IOSPlatform : Platform {
 
 actual fun getPlatform(): Platform = IOSPlatform()
 
-actual fun createHttpClient(): HttpClient = HttpClient(Darwin)
+actual fun createHttpClient(): HttpClient = HttpClient(Darwin) {
+    install(WebSockets)
+}

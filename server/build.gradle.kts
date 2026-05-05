@@ -21,6 +21,7 @@ dependencies {
     implementation(libs.ktor.serverNetty)
     implementation(libs.ktor.serverCors)
     implementation(libs.ktor.serverContentNegotiation)
+    implementation(libs.ktor.serverWebsockets)
     
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)

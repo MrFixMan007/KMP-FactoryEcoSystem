@@ -7,6 +7,7 @@ import com.chuckerteam.chucker.api.Chucker
 import com.chuckerteam.chucker.api.ChuckerInterceptor
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.websocket.WebSockets
 
 class AndroidPlatform : Platform {
     override val name: String = "Android ${Build.VERSION.SDK_INT}"
@@ -28,6 +29,7 @@ fun initPlatform(context: Context) {
 }
 
 actual fun createHttpClient(): HttpClient = HttpClient(OkHttp) {
+    install(WebSockets) // Установка плагина WebSocket
     engine {
         appContext?.let {
             addInterceptor(ChuckerInterceptor.Builder(it).build())
