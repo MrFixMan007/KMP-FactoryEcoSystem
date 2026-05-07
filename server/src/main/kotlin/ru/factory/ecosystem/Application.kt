@@ -2,8 +2,7 @@ package ru.factory.ecosystem
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
-import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
@@ -12,18 +11,22 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
-import io.ktor.server.websocket.*
-import io.ktor.websocket.*
+import io.ktor.server.websocket.DefaultWebSocketServerSession
+import io.ktor.server.websocket.WebSockets
+import io.ktor.server.websocket.webSocket
+import io.ktor.websocket.Frame
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.serialization.json.Json
+import ru.factory.ecosystem.html_pages.MAIN_PAGE_HTML
 import java.io.File
-import java.util.*
-import kotlin.collections.LinkedHashSet
+import java.util.Collections
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 
 fun main() {
     embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0", module = Application::module)
@@ -68,6 +71,11 @@ fun Application.module() {
     }
 
     routing {
+        // Главная страница с кнопками управления
+        get("/") {
+            call.respondText(MAIN_PAGE_HTML, ContentType.Text.Html)
+        }
+
         // Эндпоинт для подключения клиентов по WebSocket
         webSocket("/notifications") {
             sessions.add(this)
@@ -113,8 +121,9 @@ fun Application.module() {
             val mlResponse: PythonMlResponse? = analyzeFrameWithPython(imageBytes)
 
             if (mlResponse != null) {
-                val message = "Обнаружено объектов: ${mlResponse.objects.size}. Первый: ${mlResponse.objects.firstOrNull()?.label}"
-                
+                val message =
+                    "Обнаружено объектов: ${mlResponse.objects.size}. Первый: ${mlResponse.objects.firstOrNull()?.label}"
+
                 sessions.forEach { session ->
                     try {
                         session.send(Frame.Text("NOTIFICATION: $message"))

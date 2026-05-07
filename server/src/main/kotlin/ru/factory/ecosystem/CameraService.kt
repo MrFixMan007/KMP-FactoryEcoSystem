@@ -38,7 +38,7 @@ object CameraService {
 
                         // Отправляем на Python сервис
                         val result = detectGesturesRaw(bytes)
-                        
+
                         // Обновляем список объектов в превью для отрисовки рамок
                         CameraPreview.updateDetections(result?.objects ?: emptyList())
 
@@ -93,6 +93,7 @@ object CameraService {
     }
 
     fun stopScanning() {
+        CameraPreview.close()
         job?.cancel()
         webcam?.close()
     }

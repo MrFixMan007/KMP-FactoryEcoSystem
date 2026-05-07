@@ -1,7 +1,12 @@
 package ru.factory.ecosystem
 
 import com.github.sarxos.webcam.Webcam
-import java.awt.*
+import java.awt.BasicStroke
+import java.awt.BorderLayout
+import java.awt.Color
+import java.awt.Dimension
+import java.awt.Font
+import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import javax.swing.ImageIcon
 import javax.swing.JFrame
@@ -16,6 +21,10 @@ object CameraPreview {
     @Volatile
     private var lastDetections: List<Detection> = emptyList()
 
+    // Добавляем флаг для остановки цикла отрисовки
+    @Volatile
+    private var isRunning = false
+
     /**
      * Обновляет список объектов для отрисовки поверх кадра
      */
@@ -24,6 +33,7 @@ object CameraPreview {
     }
 
     fun show(webcam: Webcam) {
+        isRunning = true // Устанавливаем флаг при запуске
         SwingUtilities.invokeLater {
             frame = JFrame("Camera Preview")
             label = JLabel()
@@ -40,10 +50,10 @@ object CameraPreview {
                     if (image != null) {
                         // Рисуем рамки прямо на BufferedImage перед отображением
                         drawDetections(image)
-                        
+
                         label!!.icon = ImageIcon(image)
                         label!!.repaint()
-                        
+
                         // Подгоняем размер окна под размер изображения
                         if (frame!!.width != image.width || frame!!.height != image.height + 40) {
                             frame!!.size = Dimension(image.width, image.height + 40)
@@ -59,10 +69,13 @@ object CameraPreview {
         val g2 = image.createGraphics()
         // Включаем сглаживание для лучшего качества текста и линий
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-        
+        g2.setRenderingHint(
+            RenderingHints.KEY_TEXT_ANTIALIASING,
+            RenderingHints.VALUE_TEXT_ANTIALIAS_ON
+        )
+
         val detections = lastDetections
-        
+
         for (detection in detections) {
             // 1. Отрисовка рамки (Bounding Box)
             g2.color = Color.CYAN
@@ -89,7 +102,23 @@ object CameraPreview {
             g2.color = Color.WHITE
             g2.drawString(info, detection.x.toInt() + 5, detection.y.toInt() - 5)
         }
-        
+
         g2.dispose()
+    }
+
+
+    /**
+     * Закрывает окно превью и останавливает цикл отрисовки
+     */
+    fun close() {
+        isRunning = false // Останавливаем цикл в потоке
+        SwingUtilities.invokeLater {
+            frame?.let {
+                it.isVisible = false
+                it.dispose() // Освобождаем ресурсы окна
+                frame = null // Обнуляем ссылку
+                label = null
+            }
+        }
     }
 }
