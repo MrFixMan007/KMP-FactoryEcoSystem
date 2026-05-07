@@ -24,8 +24,12 @@ class MainScreenViewModel : BaseViewModel<MainScreenState, MainScreenSideEffect>
     private val client = createHttpClient()
 
     init {
-        // Подключаемся к WebSocket для получения уведомлений
+        reconnect()
+    }
+
+    fun reconnect() {
         viewModelScope.launch {
+            setState { it.copy(isConnecting = true) }
             connectToNotifications()
         }
     }
@@ -37,6 +41,11 @@ class MainScreenViewModel : BaseViewModel<MainScreenState, MainScreenSideEffect>
 
         try {
             client.webSocket(host = host, port = SERVER_PORT, path = "/notifications") {
+                setState { it.copy(isServerConnected = true, isConnecting = false) }
+                tryPostSideEffect {
+                    MainScreenSideEffect.ShowNotification("К серверу подключен")
+                }
+                
                 incoming.consumeAsFlow()
                     .filterIsInstance<Frame.Text>()
                     .collect { frame ->
@@ -58,8 +67,14 @@ class MainScreenViewModel : BaseViewModel<MainScreenState, MainScreenSideEffect>
                         }
                     }
             }
+            // Если вышли из блока webSocket, значит соединение закрыто
+            setState { it.copy(isServerConnected = false, isConnecting = false) }
         } catch (e: Exception) {
             println("WebSocket error: ${e.message}")
+            setState { it.copy(isServerConnected = false, isConnecting = false) }
+            tryPostSideEffect {
+                MainScreenSideEffect.ShowNotification("Ошибка подключения к серверу: ${e.message}")
+            }
         }
     }
 
