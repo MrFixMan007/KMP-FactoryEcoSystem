@@ -38,6 +38,9 @@ object CameraService {
 
                         // Отправляем на Python сервис
                         val result = detectGesturesRaw(bytes)
+                        
+                        // Обновляем список объектов в превью для отрисовки рамок
+                        CameraPreview.updateDetections(result?.objects ?: emptyList())
 
                         if (result != null && result.objects.isNotEmpty()) {
                             val message =
