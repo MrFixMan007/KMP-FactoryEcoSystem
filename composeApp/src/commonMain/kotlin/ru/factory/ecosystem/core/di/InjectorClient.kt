@@ -1,6 +1,7 @@
 package ru.factory.ecosystem.core.di
 
 import ru.factory.ecosystem.features._mainscreen.ui.MainScreenViewModel
+import ru.factory.ecosystem.features.alertscreen.AlertScreenViewModel
 import ru.factory.ecosystem.features.entryscreen.EntryScreenViewModel
 import kotlin.reflect.KClass
 
@@ -25,5 +26,6 @@ object InjectorClient {
     init {
         register(MainScreenViewModel())
         register(EntryScreenViewModel())
+        register(AlertScreenViewModel())
     }
 }

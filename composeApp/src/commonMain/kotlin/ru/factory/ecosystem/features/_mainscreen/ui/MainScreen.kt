@@ -14,6 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
 import ru.factory.ecosystem.core.di.InjectorClient
 import ru.factory.ecosystem.core.ui.GlobalState
+import ru.factory.ecosystem.features.alertscreen.AlertScreen
 import ru.factory.ecosystem.features.entryscreen.EntryScreen
 
 @Composable
@@ -42,9 +43,15 @@ fun MainScreen() {
         }
     ) { innersPadding ->
         Box(modifier = Modifier.padding(innersPadding)) {
-            when (state.globalState) {
+            when (val globalState = state.globalState) {
                 is GlobalState.EntryState -> {
                     EntryScreen()
+                }
+
+                is GlobalState.AlertState -> {
+                    AlertScreen(
+                        initState = globalState.screenState
+                    )
                 }
             }
         }

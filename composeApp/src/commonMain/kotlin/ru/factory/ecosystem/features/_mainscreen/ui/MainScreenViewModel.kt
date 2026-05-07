@@ -9,17 +9,17 @@ import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
 import ru.factory.ecosystem.SERVER_HOST_FOR_ANDROID_EMULATOR
 import ru.factory.ecosystem.SERVER_PORT
+import ru.factory.ecosystem.core.ui.GlobalState
 import ru.factory.ecosystem.core.ui.viewmodel.BaseViewModel
 import ru.factory.ecosystem.createHttpClient
+import ru.factory.ecosystem.features.alertscreen.AlertScreenState
 import ru.factory.ecosystem.getPlatform
 
 /**
  * Класс Вью-модель для навигации
  */
 
-class MainScreenViewModel(
-
-) : BaseViewModel<MainScreenState, MainScreenSideEffect>(MainScreenState()) {
+class MainScreenViewModel : BaseViewModel<MainScreenState, MainScreenSideEffect>(MainScreenState()) {
 
     private val client = createHttpClient()
 
@@ -43,6 +43,15 @@ class MainScreenViewModel(
                         val text = frame.readText()
                         if (text.startsWith("NOTIFICATION:")) {
                             // Отправляем SideEffect для показа уведомления в UI
+                            navigateTo(
+                                GlobalState.AlertState(
+                                    screenState = AlertScreenState(
+                                        title = "Внимание, тревога!",
+                                        descriptionText = "Покиньте помещение!",
+                                        bottomButonText = "Принято",
+                                    )
+                                )
+                            )
                             tryPostSideEffect {
                                 MainScreenSideEffect.ShowNotification(text.removePrefix("NOTIFICATION: "))
                             }
@@ -54,10 +63,12 @@ class MainScreenViewModel(
         }
     }
 
-    fun navigateTo() {
-//        setState {
-//            it.copy(globalState = GlobalState.CraftState())
-//        }
+    fun navigateTo(newState: GlobalState) {
+        viewModelScope.launch {
+            setState {
+                it.copy(globalState = newState)
+            }
+        }
     }
 
 }
