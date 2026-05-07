@@ -85,17 +85,23 @@ fun Application.module() {
             }
         }
 
-        get("/") {
-            call.respondText("Response: ${Greeting().greet()}")
+        get("/start-scan") {
+            // Запуск сканирования с камеры
+            CameraService.startScanning()
+            call.respondText("Запуск сканирования")
+        }
+
+        get("/stop-scan") {
+            CameraService.stopScanning()
+            call.respondText("Остановка сканирования")
         }
 
         get("/lol") {
             call.respondText("lol bro loool")
         }
 
-        // Наш тестовый GET-маршрут
+        // Тестовый маршрут для ручного запуска анализа файла
         get("/test-ml") {
-            // 1. Находим файл на диске сервера (путь относительно корня проекта Ktor)
             val file = File("test_images/hand.png")
 
             if (!file.exists()) {
@@ -103,12 +109,10 @@ fun Application.module() {
                 return@get
             }
 
-            // 2. Читаем байты
             val imageBytes = file.readBytes()
             val mlResponse: PythonMlResponse? = analyzeFrameWithPython(imageBytes)
 
             if (mlResponse != null) {
-                // РАССЫЛКА УВЕДОМЛЕНИЯ ВСЕМ КЛИЕНТАМ
                 val message = "Обнаружено объектов: ${mlResponse.objects.size}. Первый: ${mlResponse.objects.firstOrNull()?.label}"
                 
                 sessions.forEach { session ->
