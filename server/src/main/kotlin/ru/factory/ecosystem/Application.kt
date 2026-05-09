@@ -23,10 +23,17 @@ import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.Frame
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.serialization.json.Json
+import ru.factory.ecosystem.dto.GestureType
+import ru.factory.ecosystem.dto.GestureType.Companion.fromValue
+import ru.factory.ecosystem.dto.PythonMlResponse
 import ru.factory.ecosystem.html_pages.MAIN_PAGE_HTML
+import ru.factory.ecosystem.service.CameraService
+import ru.factory.ecosystem.service.analyzeFrameWithPython
 import java.io.File
 import java.util.Collections
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
+
+const val TAG = "Server_application"
 
 fun main() {
     embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0", module = Application::module)
@@ -34,7 +41,41 @@ fun main() {
 }
 
 // Хранилище активных WebSocket-сессий
-val sessions = Collections.synchronizedSet<DefaultWebSocketServerSession>(LinkedHashSet())
+private val sessions = Collections.synchronizedSet<DefaultWebSocketServerSession>(LinkedHashSet())
+
+internal suspend fun PythonMlResponse.processNotifications() {
+
+    val actualGestures = this.objects.filter { it.label != GestureType.NO_GESTURE.value }
+
+    println("$TAG: actual detected gestures: $actualGestures")
+
+    if (actualGestures.isEmpty()) return
+
+    val dangerGestureTypes = GestureType.getDangerGestures()
+    val goodGestureTypes = GestureType.getGoodGestures()
+
+    if (actualGestures.any { dangerGestureTypes.contains(fromValue(it.label)) }) {
+        println("$TAG: danger detected gestures")
+        sendMessageForSessions("danger detected")
+    } else if (actualGestures.any { goodGestureTypes.contains(fromValue(it.label)) }) {
+        println("$TAG: good detected gestures")
+        sendMessageForSessions("good detected")
+    } else {
+        println("$TAG: warning detected gestures")
+        sendMessageForSessions("warning detected")
+    }
+}
+
+private suspend fun sendMessageForSessions(message: String) {
+    sessions.forEach { session ->
+        try {
+            session.send(Frame.Text(message))
+            println("$TAG: send to $session message: $message")
+        } catch (e: Exception) {
+            println("Ошибка отправки в сокет: ${e.message}")
+        }
+    }
+}
 
 // Client to communicate with Python microservice
 val pythonClient = HttpClient(CIO) {
@@ -72,8 +113,12 @@ fun Application.module() {
 
     routing {
         // Главная страница с кнопками управления
-        get("/") {
+        get("/index") {
             call.respondText(MAIN_PAGE_HTML, ContentType.Text.Html)
+        }
+
+        get("/") {
+            call.respondText(Greeting.greet())
         }
 
         // Эндпоинт для подключения клиентов по WebSocket
@@ -121,17 +166,7 @@ fun Application.module() {
             val mlResponse: PythonMlResponse? = analyzeFrameWithPython(imageBytes)
 
             if (mlResponse != null) {
-                val message =
-                    "Обнаружено объектов: ${mlResponse.objects.size}. Первый: ${mlResponse.objects.firstOrNull()?.label}"
-
-                sessions.forEach { session ->
-                    try {
-                        session.send(Frame.Text("NOTIFICATION: $message"))
-                    } catch (e: Exception) {
-                        println("Ошибка отправки в сокет: ${e.message}")
-                    }
-                }
-
+                mlResponse.processNotifications()
                 call.respond(HttpStatusCode.OK, mlResponse)
             } else {
                 call.respondText("Ошибка Python ML", status = HttpStatusCode.InternalServerError)

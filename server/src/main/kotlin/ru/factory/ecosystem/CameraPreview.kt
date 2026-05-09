@@ -1,6 +1,7 @@
 package ru.factory.ecosystem
 
 import com.github.sarxos.webcam.Webcam
+import ru.factory.ecosystem.dto.Detection
 import java.awt.BasicStroke
 import java.awt.BorderLayout
 import java.awt.Color

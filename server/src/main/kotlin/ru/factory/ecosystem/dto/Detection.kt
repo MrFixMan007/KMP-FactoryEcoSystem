@@ -1,4 +1,4 @@
-package ru.factory.ecosystem
+package ru.factory.ecosystem.dto
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

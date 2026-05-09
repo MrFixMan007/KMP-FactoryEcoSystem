@@ -19,7 +19,8 @@ import ru.factory.ecosystem.getPlatform
  * Класс Вью-модель для навигации
  */
 
-class MainScreenViewModel : BaseViewModel<MainScreenState, MainScreenSideEffect>(MainScreenState()) {
+class MainScreenViewModel :
+    BaseViewModel<MainScreenState, MainScreenSideEffect>(MainScreenState()) {
 
     private val client = createHttpClient()
 
@@ -45,26 +46,11 @@ class MainScreenViewModel : BaseViewModel<MainScreenState, MainScreenSideEffect>
                 tryPostSideEffect {
                     MainScreenSideEffect.ShowNotification("К серверу подключен")
                 }
-                
+
                 incoming.consumeAsFlow()
                     .filterIsInstance<Frame.Text>()
                     .collect { frame ->
-                        val text = frame.readText()
-                        if (text.startsWith("NOTIFICATION:")) {
-                            // Отправляем SideEffect для показа уведомления в UI
-                            navigateTo(
-                                GlobalState.AlertState(
-                                    screenState = AlertScreenState(
-                                        title = "Внимание, тревога!",
-                                        descriptionText = "Покиньте помещение!",
-                                        bottomButonText = "Принято",
-                                    )
-                                )
-                            )
-                            tryPostSideEffect {
-                                MainScreenSideEffect.ShowNotification(text.removePrefix("NOTIFICATION: "))
-                            }
-                        }
+                        processNotification(frame.readText())
                     }
             }
             // Если вышли из блока webSocket, значит соединение закрыто
@@ -74,6 +60,34 @@ class MainScreenViewModel : BaseViewModel<MainScreenState, MainScreenSideEffect>
             setState { it.copy(isServerConnected = false, isConnecting = false) }
             tryPostSideEffect {
                 MainScreenSideEffect.ShowNotification("Ошибка подключения к серверу: ${e.message}")
+            }
+        }
+    }
+
+    private fun processNotification(text: String) {
+        if (text.contains("detected")) {
+            if (text.contains("danger")) {
+                // Отправляем SideEffect для показа уведомления в UI
+                navigateTo(
+                    GlobalState.AlertState(
+                        screenState = AlertScreenState(
+                            title = "Внимание, тревога!",
+                            descriptionText = "Покиньте помещение!",
+                            bottomButonText = "Принято",
+                        )
+                    )
+                )
+                tryPostSideEffect {
+                    MainScreenSideEffect.ShowNotification("Обнаружена опасность")
+                }
+            } else if (text.contains("warning")) {
+                tryPostSideEffect {
+                    MainScreenSideEffect.ShowNotification("Внимание")
+                }
+            } else if (text.contains("good")) {
+                tryPostSideEffect {
+                    MainScreenSideEffect.ShowNotification("Опасности нет")
+                }
             }
         }
     }

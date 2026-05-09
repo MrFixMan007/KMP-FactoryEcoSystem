@@ -1,6 +1,6 @@
 package ru.factory.ecosystem
 
-class Greeting {
+object Greeting {
     private val platform = getPlatform()
 
     fun greet(): String {

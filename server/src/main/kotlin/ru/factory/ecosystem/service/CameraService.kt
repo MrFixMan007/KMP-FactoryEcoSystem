@@ -1,4 +1,4 @@
-package ru.factory.ecosystem
+package ru.factory.ecosystem.service
 
 import com.github.sarxos.webcam.Webcam
 import kotlinx.coroutines.CoroutineScope
@@ -8,6 +8,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import ru.factory.ecosystem.CameraPreview
+import ru.factory.ecosystem.processNotifications
 import java.awt.Dimension
 import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
@@ -43,19 +45,7 @@ object CameraService {
                         CameraPreview.updateDetections(result?.objects ?: emptyList())
 
                         if (result != null && result.objects.isNotEmpty()) {
-                            val message =
-                                "Gesture found!:${result.objects.first().label} (${(result.objects.first().confidence * 100).toInt()}%)"
-
-                            // Рассылаем всем подключенным клиентам через WebSocket
-                            sessions.forEach { session ->
-                                try {
-                                    session.send(io.ktor.websocket.Frame.Text("NOTIFICATION: $message"))
-                                    println("$TAG: NOTIFICATION send:\n$message")
-                                } catch (e: Exception) {
-                                    // Ошибка отправки конкретному клиенту
-                                    println("$TAG: Error response to client:\n${e.message}")
-                                }
-                            }
+                            result.processNotifications()
                         } else {
                             println("$TAG: Gestures Not found")
                         }

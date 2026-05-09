@@ -1,4 +1,4 @@
-package ru.factory.ecosystem
+package ru.factory.ecosystem.service
 
 import io.ktor.client.call.body
 import io.ktor.client.request.forms.formData
@@ -9,6 +9,8 @@ import io.ktor.http.ContentType
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
+import ru.factory.ecosystem.dto.PythonMlResponse
+import ru.factory.ecosystem.pythonClient
 
 const val ML_URL = "http://127.0.0.1:8001"
 const val TAG = "MLQueries"
@@ -25,10 +27,9 @@ suspend fun analyzeFrameWithPython(imageBytes: ByteArray): PythonMlResponse? {
                 })
             }
         )
-
+        println("$TAG: Response: ${response.status}")
         // Магия Ktor: автоматически конвертируем ответ в data class
         response.body<PythonMlResponse>()
-
     } catch (e: Exception) {
         println("$TAG: Error connect to Python ML: ${e.localizedMessage}")
         null
@@ -44,6 +45,7 @@ suspend fun detectGesturesRaw(imageBytes: ByteArray): PythonMlResponse? {
             contentType(ContentType.Image.JPEG)
             setBody(imageBytes)
         }
+        println("$TAG: Response: ${response.status}")
         response.body<PythonMlResponse>()
     } catch (e: Exception) {
         println("$TAG: Error connect to Python ML: ${e.localizedMessage}")
